@@ -16,11 +16,10 @@
 class CPU {
     typedef unsigned char byte;
 private:
-    sf::RenderWindow window;
-    MMU mmu;
     byte reg[8] = {0};
     uint16_t PC;
     uint16_t SP;
+    MMU* mmu;
 
     bool generatesHalfCarry(const byte &value1, const byte &value2);
     bool generatesCarry(const int &value1, const int &value2);
@@ -30,16 +29,16 @@ private:
 public:
     void setFlag(const char &name, const bool &value);
     bool getFlag(const char &name) const;
-    CPU() : PC(0), SP(0), window(sf::RenderWindow(sf::VideoMode(640, 576), "GameBoy Emulator")), mmu(window) {};
+    explicit CPU(MMU* mmuptr) : PC(0), SP(0), mmu(mmuptr) {};
 
     // LD16, PUSH, POP
     void LD16();                    // LD SP, HL
     void LD16(const int8_t &value); // LD HL, SP + r8
     void LD16(const std::string &name, const uint16_t &value);
-    void PUSH(const std::string &name, MMU &mmu);
-    void PUSH(const uint16_t &d16, MMU &mmu);
-    void POP(const std::string &name, MMU &mmu);
-    uint16_t POP(MMU &mmu);
+    void PUSH(const std::string &name);
+    void PUSH(const uint16_t &d16);
+    void POP(const std::string &name);
+    uint16_t POP();
 
     // LD
     void LD(const std::string &name, const byte &value);
@@ -80,11 +79,11 @@ public:
     void JR(const std::string &instruction, const int8_t &r8);
     void JP(const uint16_t &a16);
     void JP(const std::string &instruction, const uint16_t &a16);
-    void CALL(const uint16_t &a16, MMU &mmu);
-    void CALL(const std::string &instruction, const uint16_t &a16, MMU &mmu);
-    void RET(MMU &mmu);
-    void RET(const std::string &instruction, MMU &mmu);
-    void RST(const uint16_t &a16, MMU &mmu);
+    void CALL(const uint16_t &a16);
+    void CALL(const std::string &instruction, const uint16_t &a16);
+    void RET();
+    void RET(const std::string &instruction);
+    void RST(const uint16_t &a16);
 
     // Bit-wise operations
     void RLCA();
@@ -120,7 +119,11 @@ public:
     byte getRegValue(const std::string &name) const;
     uint16_t getRegValue16(const std::string &name);
 //    void setReg(std::string name, byte value);
-    void run();
+    void execute();
+
+    uint16_t getPC() const;
+
+    void setPC(uint16_t PC);
 };
 
 

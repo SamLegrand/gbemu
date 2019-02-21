@@ -178,26 +178,26 @@ void CPU::LD(const std::string &name1, const std::string &name2) {
     LD(name1, getRegValue(name2));
 }
 
-void CPU::PUSH(const std::string &name, MMU &mmu) {
-    mmu.writeByte((uint16_t)(SP - 1), getRegValue(name.substr(0, 1)));
-    mmu.writeByte((uint16_t)(SP - 2), getRegValue(name.substr(1, 1)));
+void CPU::PUSH(const std::string &name) {
+    mmu->writeByte((uint16_t)(SP - 1), getRegValue(name.substr(0, 1)));
+    mmu->writeByte((uint16_t)(SP - 2), getRegValue(name.substr(1, 1)));
     SP -= 2;
 }
 
-void CPU::PUSH(const uint16_t &d16, MMU &mmu) {
-    mmu.writeByte((uint16_t)(SP - 1), (byte)(d16 >> 8));
-    mmu.writeByte((uint16_t)(SP - 2), (byte)(d16));
+void CPU::PUSH(const uint16_t &d16) {
+    mmu->writeByte((uint16_t)(SP - 1), (byte)(d16 >> 8));
+    mmu->writeByte((uint16_t)(SP - 2), (byte)(d16));
     SP -= 2;
 }
 
-void CPU::POP(const std::string &name, MMU &mmu) {
-    LD(name.substr(1, 1), mmu.readByte(SP));
-    LD(name.substr(0, 1), mmu.readByte((uint16_t)(SP + 1)));
+void CPU::POP(const std::string &name) {
+    LD(name.substr(1, 1), mmu->readByte(SP));
+    LD(name.substr(0, 1), mmu->readByte((uint16_t)(SP + 1)));
     SP += 2;
 }
 
-uint16_t CPU::POP(MMU &mmu) {
-    return (uint16_t)mmu.readByte(SP) & ((uint16_t)mmu.readByte((byte)(SP + 1)) << 4);
+uint16_t CPU::POP() {
+    return (uint16_t)mmu->readByte(SP) & ((uint16_t)mmu->readByte((byte)(SP + 1)) << 4);
 }
 
 void CPU::INC8(const std::string &name) {
@@ -380,29 +380,29 @@ void CPU::RRA() {
     LD("A", value);
 }
 
-void CPU::CALL(const uint16_t &a16, MMU &mmu) {
-    PUSH(PC, mmu);
+void CPU::CALL(const uint16_t &a16) {
+    PUSH(PC);
     PC = (uint16_t)(a16 - 1);
 }
 
-void CPU::CALL(const std::string &instruction, const uint16_t &a16, MMU &mmu) {
+void CPU::CALL(const std::string &instruction, const uint16_t &a16) {
     bool flagvalue = true;
     if (instruction.front() == 'N') flagvalue = false;
     if (getFlag(instruction.back()) == flagvalue) {
-        CALL (PC, mmu);
+        CALL (PC);
     }
 }
 
-void CPU::RET(MMU &mmu) {
-    PC = (uint16_t)(mmu.readByte((uint16_t)(SP+1)) << 8) | mmu.readByte(SP);
+void CPU::RET() {
+    PC = (uint16_t)(mmu->readByte((uint16_t)(SP+1)) << 8) | mmu->readByte(SP);
     SP += 2;
 }
 
-void CPU::RET(const std::string &instruction, MMU &mmu) {
+void CPU::RET(const std::string &instruction) {
     bool flagvalue = true;
     if (instruction.front() == 'N') flagvalue = false;
     if (getFlag(instruction.back()) == flagvalue) {
-        RET(mmu);
+        RET();
     }
 }
 
@@ -445,299 +445,9 @@ void CPU::CCF() {
     setFlag('C', !getFlag('C'));
 }
 
-void CPU::RST(const uint16_t &a16, MMU &mmu) {
-    PUSH(PC, mmu);
+void CPU::RST(const uint16_t &a16) {
+    PUSH(PC);
     PC = a16;
-}
-
-void CPU::run() {
-    bool stop = false;
-    byte instruction;
-    while (!stop && window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
-                window.close();
-                return;
-            }
-        }
-        window.display();
-        instruction = mmu.readByte(PC);
-        cout << PC << endl;
-        cout << "Executing instruction " << hex << (int)instruction << endl;
-        switch (instruction) {
-            default: cerr << "Instruction " << hex << (int)instruction << " not recognized." << endl; assert(false); break;
-            case 0x00: {break;}    // NOP
-            case 0x10: {stop = true; break;}    // STOP
-            case 0x20: {JR("NZ", mmu.readByte(++PC)); break;}
-            case 0x30: {JR("NC", mmu.readByte(++PC)); break;}
-            case 0x01: {LD16("BC", mmu.readDoubleByte(PC)); break;}
-            case 0x11: {LD16("DE", mmu.readDoubleByte(PC)); break;}
-            case 0x21: {LD16("HL", mmu.readDoubleByte(PC)); break;}
-            case 0x31: {LD16("SP", mmu.readDoubleByte(PC)); break;}
-            case 0x02: {mmu.writeByte(getRegValue16("BC"), getRegValue("A")); break;}
-            case 0x12: {mmu.writeByte(getRegValue16("DE"), getRegValue("A")); break;}
-            case 0x22: {mmu.writeByte(getRegValue16("HL+"), getRegValue("A")); break;}
-            case 0x32: {mmu.writeByte(getRegValue16("HL-"), getRegValue("A")); break;}
-            case 0x03: {INC16("BC"); break;}
-            case 0x13: {INC16("DE"); break;}
-            case 0x23: {INC16("HL"); break;}
-            case 0x33: {INC16("SP"); break;}
-            case 0x04: {INC8("B"); break;}
-            case 0x14: {INC8("D"); break;}
-            case 0x24: {INC8("H"); break;}
-            case 0x34: {mmu.writeByte(getRegValue16("HL"), (byte)(getRegValue16("HL"))); INC16("HL"); break;}
-            case 0x05: {DEC8("B"); break;}
-            case 0x15: {DEC8("D"); break;}
-            case 0x25: {DEC8("H"); break;}
-            case 0x35: {mmu.writeByte(getRegValue16("HL"), (byte)(getRegValue16("HL"))); DEC16("HL"); break;}
-            case 0x06: {LD("B", mmu.readByte(++PC)); break;}
-            case 0x16: {LD("D", mmu.readByte(++PC)); break;}
-            case 0x26: {LD("H", mmu.readByte(++PC)); break;}
-            case 0x36: {mmu.writeByte(getRegValue16("HL"), mmu.readByte(++PC)); break;}
-            case 0x07: {RLCA(); break;}
-            case 0x17: {RLA(); break;}
-            case 0x27: {DAA(); break;}
-            case 0x37: {SCF(); break;}
-            case 0x08: {uint16_t a16 = mmu.readDoubleByte(PC); mmu.writeDoubleByte(a16, getRegValue16("SP")); break;}
-            case 0x18: {JR(mmu.readByte(++PC)); break;}
-            case 0x28: {JR("Z", mmu.readByte(++PC)); break;}
-            case 0x38: {JR("C", mmu.readByte(++PC)); break;}
-            case 0x09: {ADD16("BC"); break;}
-            case 0x19: {ADD16("DE"); break;}
-            case 0x29: {ADD16("HL"); break;}
-            case 0x39: {ADD16("SP"); break;}
-            case 0x0A: {LD("A", mmu.readByte(getRegValue16("BC"))); break;}
-            case 0x1A: {LD("A", mmu.readByte(getRegValue16("DE"))); break;}
-            case 0x2A: {LD("A", mmu.readByte((byte)(getRegValue16("HL")))); INC16("HL"); break;}
-            case 0x3A: {LD("A", mmu.readByte((byte)(getRegValue16("HL")))); DEC16("HL"); break;}
-            case 0x0B: {DEC16("BC"); break;}
-            case 0x1B: {DEC16("DE"); break;}
-            case 0x2B: {DEC16("HL"); break;}
-            case 0x3B: {DEC16("SP"); break;}
-            case 0x0C: {INC8("C"); break;}
-            case 0x1C: {INC8("E"); break;}
-            case 0x2C: {INC8("L"); break;}
-            case 0x3C: {INC8("A"); break;}
-            case 0x0D: {DEC8("C"); break;}
-            case 0x1D: {DEC8("E"); break;}
-            case 0x2D: {DEC8("L"); break;}
-            case 0x3D: {DEC8("A"); break;}
-            case 0x0E: {LD("C", mmu.readByte(++PC)); break;}
-            case 0x1E: {LD("E", mmu.readByte(++PC)); break;}
-            case 0x2E: {LD("L", mmu.readByte(++PC)); break;}
-            case 0x3E: {LD("A", mmu.readByte(++PC)); break;}
-            case 0x0F: {RRCA(); break;}
-            case 0x1F: {RRA(); break;}
-            case 0x2F: {CPL(); break;}
-            case 0x3F: {CCF(); break;}
-            case 0x40: {LD("B", "B"); break;}
-            case 0x50: {LD("D", "B"); break;}
-            case 0x60: {LD("H", "B"); break;}
-            case 0x70: {mmu.writeByte(mmu.readByte(getRegValue16("HL")), getRegValue("B")); break;}
-            case 0x41: {LD("B", "C"); break;}
-            case 0x51: {LD("D", "C"); break;}
-            case 0x61: {LD("H", "C"); break;}
-            case 0x71: {mmu.writeByte(getRegValue16("HL"), getRegValue("C")); break;}
-            case 0x42: {LD("B", "D"); break;}
-            case 0x52: {LD("D", "D"); break;}
-            case 0x62: {LD("H", "D"); break;}
-            case 0x72: {mmu.writeByte(getRegValue16("HL"), getRegValue("D")); break;}
-            case 0x43: {LD("B", "E"); break;}
-            case 0x53: {LD("D", "E"); break;}
-            case 0x63: {LD("H", "E"); break;}
-            case 0x73: {mmu.writeByte(getRegValue16("HL"), getRegValue("E")); break;}
-            case 0x44: {LD("B", "H"); break;}
-            case 0x54: {LD("D", "H"); break;}
-            case 0x64: {LD("H", "H"); break;}
-            case 0x74: {mmu.writeByte(getRegValue16("HL"), getRegValue("H")); break;}
-            case 0x45: {LD("B", "L"); break;}
-            case 0x55: {LD("D", "L"); break;}
-            case 0x65: {LD("H", "L"); break;}
-            case 0x75: {mmu.writeByte(getRegValue16("HL"), getRegValue("L")); break;}
-            case 0x46: {LD("B", mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x56: {LD("D", mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x66: {LD("H", mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x76: {return;}                // HALT
-            case 0x47: {LD("B", "A"); break;}
-            case 0x57: {LD("D", "A"); break;}
-            case 0x67: {LD("H", "A"); break;}
-            case 0x77: {mmu.writeByte(getRegValue16("HL"), getRegValue("A")); break;}
-            case 0x48: {LD("C", "B"); break;}
-            case 0x58: {LD("E", "B"); break;}
-            case 0x68: {LD("L", "B"); break;}
-            case 0x78: {LD("A", getRegValue("B")); break;}
-            case 0x49: {LD("C", "C"); break;}
-            case 0x59: {LD("E", "C"); break;}
-            case 0x69: {LD("L", "C"); break;}
-            case 0x79: {LD("A", getRegValue("C")); break;}
-            case 0x4A: {LD("C", "D"); break;}
-            case 0x5A: {LD("E", "D"); break;}
-            case 0x6A: {LD("L", "D"); break;}
-            case 0x7A: {LD("A", getRegValue("D")); break;}
-            case 0x4B: {LD("C", "E"); break;}
-            case 0x5B: {LD("E", "E"); break;}
-            case 0x6B: {LD("L", "E"); break;}
-            case 0x7B: {LD("A", getRegValue("E")); break;}
-            case 0x4C: {LD("C", "H"); break;}
-            case 0x5C: {LD("E", "H"); break;}
-            case 0x6C: {LD("L", "H"); break;}
-            case 0x7C: {LD("A", getRegValue("H")); break;}
-            case 0x4D: {LD("C", "L"); break;}
-            case 0x5D: {LD("E", "L"); break;}
-            case 0x6D: {LD("L", "L"); break;}
-            case 0x7D: {LD("A", getRegValue("L")); break;}
-            case 0x4E: {LD("C", mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x5E: {LD("E", mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x6E: {LD("L", mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x7E: {LD("A", mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x4F: {LD("C", "A"); break;}
-            case 0x5F: {LD("E", "A"); break;}
-            case 0x6F: {LD("L", "A"); break;}
-            case 0x7F: {LD("A", getRegValue("A")); break;}
-            case 0x80: {ADD("B"); break;}
-            case 0x90: {SUB("B"); break;}
-            case 0xA0: {AND("B"); break;}
-            case 0xB0: {OR("B"); break;}
-            case 0x81: {ADD("C"); break;}
-            case 0x91: {SUB("C"); break;}
-            case 0xA1: {AND("C"); break;}
-            case 0xB1: {OR("C"); break;}
-            case 0x82: {ADD("D"); break;}
-            case 0x92: {SUB("D"); break;}
-            case 0xA2: {AND("D"); break;}
-            case 0xB2: {OR("D"); break;}
-            case 0x83: {ADD("E"); break;}
-            case 0x93: {SUB("E"); break;}
-            case 0xA3: {AND("E"); break;}
-            case 0xB3: {OR("E"); break;}
-            case 0x84: {ADD("H"); break;}
-            case 0x94: {SUB("H"); break;}
-            case 0xA4: {AND("H"); break;}
-            case 0xB4: {OR("H"); break;}
-            case 0x85: {ADD("L"); break;}
-            case 0x95: {SUB("L"); break;}
-            case 0xA5: {AND("L"); break;}
-            case 0xB5: {OR("L"); break;}
-            case 0x86: {ADD(mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x96: {SUB(mmu.readByte(getRegValue16("HL"))); break;}
-            case 0xA6: {AND(mmu.readByte(getRegValue16("HL"))); break;}
-            case 0xB6: {OR(mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x87: {ADD("A"); break;}
-            case 0x97: {SUB("A"); break;}
-            case 0xA7: {AND("A"); break;}
-            case 0xB7: {OR("A"); break;}
-            case 0x88: {ADC("B"); break;}
-            case 0x98: {SBC("B"); break;}
-            case 0xA8: {XOR("B"); break;}
-            case 0xB8: {CP("B"); break;}
-            case 0x89: {ADC("C"); break;}
-            case 0x99: {SBC("C"); break;}
-            case 0xA9: {XOR("C"); break;}
-            case 0xB9: {CP("C"); break;}
-            case 0x8A: {ADC("D"); break;}
-            case 0x9A: {SBC("D"); break;}
-            case 0xAA: {XOR("D"); break;}
-            case 0xBA: {CP("D"); break;}
-            case 0x8B: {ADC("E"); break;}
-            case 0x9B: {SBC("E"); break;}
-            case 0xAB: {XOR("E"); break;}
-            case 0xBB: {CP("E"); break;}
-            case 0x8C: {ADC("H"); break;}
-            case 0x9C: {SBC("H"); break;}
-            case 0xAC: {XOR("H"); break;}
-            case 0xBC: {CP("H"); break;}
-            case 0x8D: {ADC("L"); break;}
-            case 0x9D: {SBC("L"); break;}
-            case 0xAD: {XOR("L"); break;}
-            case 0xBD: {CP("L"); break;}
-            case 0x8E: {ADC(mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x9E: {SBC(mmu.readByte(getRegValue16("HL"))); break;}
-            case 0xAE: {XOR(mmu.readByte(getRegValue16("HL"))); break;}
-            case 0xBE: {CP(mmu.readByte(getRegValue16("HL"))); break;}
-            case 0x8F: {ADC("A"); break;}
-            case 0x9F: {SBC("A"); break;}
-            case 0xAF: {XOR("A"); break;}
-            case 0xBF: {CP("A"); break;}
-            case 0xC0: {RET("NZ", mmu); break;}
-            case 0xD0: {RET("NC", mmu); break;}
-            case 0xE0: {mmu.writeByte((uint16_t)(0xFF00 + mmu.readByte(++PC)), getRegValue("A")); break;}
-            case 0xF0: {LD("A", mmu.readByte((uint16_t)(0xFF00 + mmu.readByte(++PC)))); break;}
-            case 0xC1: {POP("BC", mmu); break;}
-            case 0xD1: {POP("DE", mmu); break;}
-            case 0xE1: {POP("HL", mmu); break;}
-            case 0xF1: {POP("AF", mmu); break;}
-            case 0xC2: {JP("NZ", mmu.readDoubleByte(PC)); break;}
-            case 0xD2: {JP("NC", mmu.readDoubleByte(PC)); break;}
-            case 0xE2: {mmu.writeByte((uint16_t)(0xFF00 + getRegValue("C")), getRegValue("A")); break;}
-            case 0xF2: {LD("A", mmu.readByte((uint16_t)(0xFF00 + getRegValue("C")))); break;}
-            case 0xC3: {JP(mmu.readDoubleByte(PC)); break;}
-            case 0xF3: {break;} // Disable interrupts
-            case 0xC4: {CALL("NZ", mmu.readDoubleByte(PC), mmu); break;}
-            case 0xD4: {CALL("NC", mmu.readDoubleByte(PC), mmu); break;}
-            case 0xC5: {PUSH("BC", mmu); break;}
-            case 0xD5: {PUSH("DE", mmu); break;}
-            case 0xE5: {PUSH("HL", mmu); break;}
-            case 0xF5: {PUSH("AF", mmu); break;}
-            case 0xC6: {ADD(mmu.readByte(++PC)); break;}
-            case 0xD6: {SUB(mmu.readByte(++PC)); break;}
-            case 0xE6: {AND(mmu.readByte(++PC)); break;}
-            case 0xF6: {OR(mmu.readByte(++PC)); break;}
-            case 0xC7: {RST(0x00, mmu); break;}
-            case 0xD7: {RST(0x10, mmu); break;}
-            case 0xE7: {RST(0x20, mmu); break;}
-            case 0xF7: {RST(0x30, mmu); break;}
-            case 0xC8: {RET("Z", mmu); break;}
-            case 0xD8: {RET("C", mmu); break;}
-            case 0xE8: {ADD16(mmu.readByte(++PC)); break;}
-            case 0xF8: {LD16("HL", getRegValue16("SP") + mmu.readByte(++PC)); break;}
-            case 0xC9: {RET(mmu); break;}
-            case 0xD9: {RET(mmu); break;}   // Enable interrupts
-            case 0xE9: {uint16_t a16 = getRegValue16("HL"); JP(mmu.readDoubleByte(a16)); break;}
-            case 0xF9: {LD16(); break;}
-            case 0xCA: {JP("Z", mmu.readDoubleByte(PC)); break;}
-            case 0xDA: {JP("C", mmu.readDoubleByte(PC)); break;}
-            case 0xEA: {mmu.writeByte(mmu.readDoubleByte(PC), getRegValue("A")); break;}
-            case 0xFA: {LD("A", mmu.readByte(mmu.readDoubleByte(PC))); break;}
-            case 0xCB: {PREFIX_CB(); break;}     // PREFIX CB
-            case 0xFB: {break;}     // Enable interrupts
-            case 0xCC: {CALL("Z", mmu.readDoubleByte(PC), mmu); break;}
-            case 0xDC: {CALL("C", mmu.readDoubleByte(PC), mmu); break;}
-            case 0xCD: {CALL(mmu.readDoubleByte(PC), mmu); break;}
-            case 0xCE: {ADC(mmu.readByte(++PC)); break;}
-            case 0xDE: {SBC(mmu.readByte(++PC)); break;}
-            case 0xEE: {XOR(mmu.readByte(++PC)); break;}
-            case 0xFE: {CP(mmu.readByte(++PC)); break;}
-            case 0xCF: {RST(0x8, mmu); break;}
-            case 0xDF: {RST(0x18, mmu); break;}
-            case 0xEF: {RST(0x28, mmu); break;}
-            case 0xFF: {RST(0x38, mmu); break;}
-        }
-        ++PC;
-        if (PC > 0x00e0) {
-            cout << "SP: " << SP << " ";
-            cout << "A: " << (int)getRegValue("A") << " ";
-            cout << "B: " << (int)getRegValue("B") << " ";
-            cout << "C: " << (int)getRegValue("C") << " ";
-            cout << "D: " << (int)getRegValue("D") << " ";
-            cout << "E: " << (int)getRegValue("E") << " ";
-            cout << "F: " << (int)getRegValue("F") << " ";
-            cout << "~Z: " << (int)getFlag('Z') << " ";
-            cout << "~N: " << (int)getFlag('N') << " ";
-            cout << "~H: " << (int)getFlag('H') << " ";
-            cout << "~C: " << (int)getFlag('C') << " ";
-            cout << "H: " << (int)getRegValue("H") << " ";
-            cout << "L: " << (int)getRegValue("L") << endl;
-        }
-//        if ((int) PC >= 0x002b ) {
-//            this_thread::sleep_for(1s);
-//        }
-        if (PC == 0x0100) {
-            mmu.setBoot(false);
-//            cout << "DID IT" << endl;
-            return;
-        }
-    }
 }
 
 void CPU::RL(const string& name) {
@@ -752,18 +462,295 @@ void CPU::RL(const string& name) {
 
 void CPU::RL() {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = (value << 1) | getFlag('C');
     setFlag('Z', result == 0);
     setFlag('N', false);
     setFlag('H', false);
     setFlag('C', (byte)(value & 0x80) >> 7);
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
+}
+
+void CPU::execute() {
+    byte instruction = mmu->readByte(PC);
+    cout << "Executing instruction " << hex << (int)instruction << endl;
+    switch (instruction) {
+        default: cerr << "Instruction " << hex << (int)instruction << " not recognized." << endl; assert(false); break;
+        case 0x00: {break;}    // NOP
+        case 0x10: {break;}    // STOP = NOP
+        case 0x20: {JR("NZ", mmu->readByte(++PC)); break;}
+        case 0x30: {JR("NC", mmu->readByte(++PC)); break;}
+        case 0x01: {LD16("BC", mmu->readDoubleByte(PC)); break;}
+        case 0x11: {LD16("DE", mmu->readDoubleByte(PC)); break;}
+        case 0x21: {LD16("HL", mmu->readDoubleByte(PC)); break;}
+        case 0x31: {LD16("SP", mmu->readDoubleByte(PC)); break;}
+        case 0x02: {mmu->writeByte(getRegValue16("BC"), getRegValue("A")); break;}
+        case 0x12: {mmu->writeByte(getRegValue16("DE"), getRegValue("A")); break;}
+        case 0x22: {mmu->writeByte(getRegValue16("HL+"), getRegValue("A")); break;}
+        case 0x32: {mmu->writeByte(getRegValue16("HL-"), getRegValue("A")); break;}
+        case 0x03: {INC16("BC"); break;}
+        case 0x13: {INC16("DE"); break;}
+        case 0x23: {INC16("HL"); break;}
+        case 0x33: {INC16("SP"); break;}
+        case 0x04: {INC8("B"); break;}
+        case 0x14: {INC8("D"); break;}
+        case 0x24: {INC8("H"); break;}
+        case 0x34: {mmu->writeByte(getRegValue16("HL"), (byte)(getRegValue16("HL"))); INC16("HL"); break;}
+        case 0x05: {DEC8("B"); break;}
+        case 0x15: {DEC8("D"); break;}
+        case 0x25: {DEC8("H"); break;}
+        case 0x35: {mmu->writeByte(getRegValue16("HL"), (byte)(getRegValue16("HL"))); DEC16("HL"); break;}
+        case 0x06: {LD("B", mmu->readByte(++PC)); break;}
+        case 0x16: {LD("D", mmu->readByte(++PC)); break;}
+        case 0x26: {LD("H", mmu->readByte(++PC)); break;}
+        case 0x36: {mmu->writeByte(getRegValue16("HL"), mmu->readByte(++PC)); break;}
+        case 0x07: {RLCA(); break;}
+        case 0x17: {RLA(); break;}
+        case 0x27: {DAA(); break;}
+        case 0x37: {SCF(); break;}
+        case 0x08: {uint16_t a16 = mmu->readDoubleByte(PC); mmu->writeDoubleByte(a16, getRegValue16("SP")); break;}
+        case 0x18: {JR(mmu->readByte(++PC)); break;}
+        case 0x28: {JR("Z", mmu->readByte(++PC)); break;}
+        case 0x38: {JR("C", mmu->readByte(++PC)); break;}
+        case 0x09: {ADD16("BC"); break;}
+        case 0x19: {ADD16("DE"); break;}
+        case 0x29: {ADD16("HL"); break;}
+        case 0x39: {ADD16("SP"); break;}
+        case 0x0A: {LD("A", mmu->readByte(getRegValue16("BC"))); break;}
+        case 0x1A: {LD("A", mmu->readByte(getRegValue16("DE"))); break;}
+        case 0x2A: {LD("A", mmu->readByte((byte)(getRegValue16("HL")))); INC16("HL"); break;}
+        case 0x3A: {LD("A", mmu->readByte((byte)(getRegValue16("HL")))); DEC16("HL"); break;}
+        case 0x0B: {DEC16("BC"); break;}
+        case 0x1B: {DEC16("DE"); break;}
+        case 0x2B: {DEC16("HL"); break;}
+        case 0x3B: {DEC16("SP"); break;}
+        case 0x0C: {INC8("C"); break;}
+        case 0x1C: {INC8("E"); break;}
+        case 0x2C: {INC8("L"); break;}
+        case 0x3C: {INC8("A"); break;}
+        case 0x0D: {DEC8("C"); break;}
+        case 0x1D: {DEC8("E"); break;}
+        case 0x2D: {DEC8("L"); break;}
+        case 0x3D: {DEC8("A"); break;}
+        case 0x0E: {LD("C", mmu->readByte(++PC)); break;}
+        case 0x1E: {LD("E", mmu->readByte(++PC)); break;}
+        case 0x2E: {LD("L", mmu->readByte(++PC)); break;}
+        case 0x3E: {LD("A", mmu->readByte(++PC)); break;}
+        case 0x0F: {RRCA(); break;}
+        case 0x1F: {RRA(); break;}
+        case 0x2F: {CPL(); break;}
+        case 0x3F: {CCF(); break;}
+        case 0x40: {LD("B", "B"); break;}
+        case 0x50: {LD("D", "B"); break;}
+        case 0x60: {LD("H", "B"); break;}
+        case 0x70: {mmu->writeByte(mmu->readByte(getRegValue16("HL")), getRegValue("B")); break;}
+        case 0x41: {LD("B", "C"); break;}
+        case 0x51: {LD("D", "C"); break;}
+        case 0x61: {LD("H", "C"); break;}
+        case 0x71: {mmu->writeByte(getRegValue16("HL"), getRegValue("C")); break;}
+        case 0x42: {LD("B", "D"); break;}
+        case 0x52: {LD("D", "D"); break;}
+        case 0x62: {LD("H", "D"); break;}
+        case 0x72: {mmu->writeByte(getRegValue16("HL"), getRegValue("D")); break;}
+        case 0x43: {LD("B", "E"); break;}
+        case 0x53: {LD("D", "E"); break;}
+        case 0x63: {LD("H", "E"); break;}
+        case 0x73: {mmu->writeByte(getRegValue16("HL"), getRegValue("E")); break;}
+        case 0x44: {LD("B", "H"); break;}
+        case 0x54: {LD("D", "H"); break;}
+        case 0x64: {LD("H", "H"); break;}
+        case 0x74: {mmu->writeByte(getRegValue16("HL"), getRegValue("H")); break;}
+        case 0x45: {LD("B", "L"); break;}
+        case 0x55: {LD("D", "L"); break;}
+        case 0x65: {LD("H", "L"); break;}
+        case 0x75: {mmu->writeByte(getRegValue16("HL"), getRegValue("L")); break;}
+        case 0x46: {LD("B", mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x56: {LD("D", mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x66: {LD("H", mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x76: {return;}                // HALT
+        case 0x47: {LD("B", "A"); break;}
+        case 0x57: {LD("D", "A"); break;}
+        case 0x67: {LD("H", "A"); break;}
+        case 0x77: {mmu->writeByte(getRegValue16("HL"), getRegValue("A")); break;}
+        case 0x48: {LD("C", "B"); break;}
+        case 0x58: {LD("E", "B"); break;}
+        case 0x68: {LD("L", "B"); break;}
+        case 0x78: {LD("A", getRegValue("B")); break;}
+        case 0x49: {LD("C", "C"); break;}
+        case 0x59: {LD("E", "C"); break;}
+        case 0x69: {LD("L", "C"); break;}
+        case 0x79: {LD("A", getRegValue("C")); break;}
+        case 0x4A: {LD("C", "D"); break;}
+        case 0x5A: {LD("E", "D"); break;}
+        case 0x6A: {LD("L", "D"); break;}
+        case 0x7A: {LD("A", getRegValue("D")); break;}
+        case 0x4B: {LD("C", "E"); break;}
+        case 0x5B: {LD("E", "E"); break;}
+        case 0x6B: {LD("L", "E"); break;}
+        case 0x7B: {LD("A", getRegValue("E")); break;}
+        case 0x4C: {LD("C", "H"); break;}
+        case 0x5C: {LD("E", "H"); break;}
+        case 0x6C: {LD("L", "H"); break;}
+        case 0x7C: {LD("A", getRegValue("H")); break;}
+        case 0x4D: {LD("C", "L"); break;}
+        case 0x5D: {LD("E", "L"); break;}
+        case 0x6D: {LD("L", "L"); break;}
+        case 0x7D: {LD("A", getRegValue("L")); break;}
+        case 0x4E: {LD("C", mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x5E: {LD("E", mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x6E: {LD("L", mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x7E: {LD("A", mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x4F: {LD("C", "A"); break;}
+        case 0x5F: {LD("E", "A"); break;}
+        case 0x6F: {LD("L", "A"); break;}
+        case 0x7F: {LD("A", getRegValue("A")); break;}
+        case 0x80: {ADD("B"); break;}
+        case 0x90: {SUB("B"); break;}
+        case 0xA0: {AND("B"); break;}
+        case 0xB0: {OR("B"); break;}
+        case 0x81: {ADD("C"); break;}
+        case 0x91: {SUB("C"); break;}
+        case 0xA1: {AND("C"); break;}
+        case 0xB1: {OR("C"); break;}
+        case 0x82: {ADD("D"); break;}
+        case 0x92: {SUB("D"); break;}
+        case 0xA2: {AND("D"); break;}
+        case 0xB2: {OR("D"); break;}
+        case 0x83: {ADD("E"); break;}
+        case 0x93: {SUB("E"); break;}
+        case 0xA3: {AND("E"); break;}
+        case 0xB3: {OR("E"); break;}
+        case 0x84: {ADD("H"); break;}
+        case 0x94: {SUB("H"); break;}
+        case 0xA4: {AND("H"); break;}
+        case 0xB4: {OR("H"); break;}
+        case 0x85: {ADD("L"); break;}
+        case 0x95: {SUB("L"); break;}
+        case 0xA5: {AND("L"); break;}
+        case 0xB5: {OR("L"); break;}
+        case 0x86: {ADD(mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x96: {SUB(mmu->readByte(getRegValue16("HL"))); break;}
+        case 0xA6: {AND(mmu->readByte(getRegValue16("HL"))); break;}
+        case 0xB6: {OR(mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x87: {ADD("A"); break;}
+        case 0x97: {SUB("A"); break;}
+        case 0xA7: {AND("A"); break;}
+        case 0xB7: {OR("A"); break;}
+        case 0x88: {ADC("B"); break;}
+        case 0x98: {SBC("B"); break;}
+        case 0xA8: {XOR("B"); break;}
+        case 0xB8: {CP("B"); break;}
+        case 0x89: {ADC("C"); break;}
+        case 0x99: {SBC("C"); break;}
+        case 0xA9: {XOR("C"); break;}
+        case 0xB9: {CP("C"); break;}
+        case 0x8A: {ADC("D"); break;}
+        case 0x9A: {SBC("D"); break;}
+        case 0xAA: {XOR("D"); break;}
+        case 0xBA: {CP("D"); break;}
+        case 0x8B: {ADC("E"); break;}
+        case 0x9B: {SBC("E"); break;}
+        case 0xAB: {XOR("E"); break;}
+        case 0xBB: {CP("E"); break;}
+        case 0x8C: {ADC("H"); break;}
+        case 0x9C: {SBC("H"); break;}
+        case 0xAC: {XOR("H"); break;}
+        case 0xBC: {CP("H"); break;}
+        case 0x8D: {ADC("L"); break;}
+        case 0x9D: {SBC("L"); break;}
+        case 0xAD: {XOR("L"); break;}
+        case 0xBD: {CP("L"); break;}
+        case 0x8E: {ADC(mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x9E: {SBC(mmu->readByte(getRegValue16("HL"))); break;}
+        case 0xAE: {XOR(mmu->readByte(getRegValue16("HL"))); break;}
+        case 0xBE: {CP(mmu->readByte(getRegValue16("HL"))); break;}
+        case 0x8F: {ADC("A"); break;}
+        case 0x9F: {SBC("A"); break;}
+        case 0xAF: {XOR("A"); break;}
+        case 0xBF: {CP("A"); break;}
+        case 0xC0: {RET("NZ"); break;}
+        case 0xD0: {RET("NC"); break;}
+        case 0xE0: {mmu->writeByte((uint16_t)(0xFF00 + mmu->readByte(++PC)), getRegValue("A")); break;}
+        case 0xF0: {LD("A", mmu->readByte((uint16_t)(0xFF00 + mmu->readByte(++PC)))); break;}
+        case 0xC1: {POP("BC"); break;}
+        case 0xD1: {POP("DE"); break;}
+        case 0xE1: {POP("HL"); break;}
+        case 0xF1: {POP("AF"); break;}
+        case 0xC2: {JP("NZ", mmu->readDoubleByte(PC)); break;}
+        case 0xD2: {JP("NC", mmu->readDoubleByte(PC)); break;}
+        case 0xE2: {mmu->writeByte((uint16_t)(0xFF00 + getRegValue("C")), getRegValue("A")); break;}
+        case 0xF2: {LD("A", mmu->readByte((uint16_t)(0xFF00 + getRegValue("C")))); break;}
+        case 0xC3: {JP(mmu->readDoubleByte(PC)); break;}
+        case 0xF3: {break;} // Disable interrupts
+        case 0xC4: {CALL("NZ", mmu->readDoubleByte(PC)); break;}
+        case 0xD4: {CALL("NC", mmu->readDoubleByte(PC)); break;}
+        case 0xC5: {PUSH("BC"); break;}
+        case 0xD5: {PUSH("DE"); break;}
+        case 0xE5: {PUSH("HL"); break;}
+        case 0xF5: {PUSH("AF"); break;}
+        case 0xC6: {ADD(mmu->readByte(++PC)); break;}
+        case 0xD6: {SUB(mmu->readByte(++PC)); break;}
+        case 0xE6: {AND(mmu->readByte(++PC)); break;}
+        case 0xF6: {OR(mmu->readByte(++PC)); break;}
+        case 0xC7: {RST(0x00); break;}
+        case 0xD7: {RST(0x10); break;}
+        case 0xE7: {RST(0x20); break;}
+        case 0xF7: {RST(0x30); break;}
+        case 0xC8: {RET("Z"); break;}
+        case 0xD8: {RET("C"); break;}
+        case 0xE8: {ADD16(mmu->readByte(++PC)); break;}
+        case 0xF8: {LD16("HL", getRegValue16("SP") + mmu->readByte(++PC)); break;}
+        case 0xC9: {RET(); break;}
+        case 0xD9: {RET(); break;}   // Enable interrupts
+        case 0xE9: {uint16_t a16 = getRegValue16("HL"); JP(mmu->readDoubleByte(a16)); break;}
+        case 0xF9: {LD16(); break;}
+        case 0xCA: {JP("Z", mmu->readDoubleByte(PC)); break;}
+        case 0xDA: {JP("C", mmu->readDoubleByte(PC)); break;}
+        case 0xEA: {mmu->writeByte(mmu->readDoubleByte(PC), getRegValue("A")); break;}
+        case 0xFA: {LD("A", mmu->readByte(mmu->readDoubleByte(PC))); break;}
+        case 0xCB: {PREFIX_CB(); break;}     // PREFIX CB
+        case 0xFB: {break;}     // Enable interrupts
+        case 0xCC: {CALL("Z", mmu->readDoubleByte(PC)); break;}
+        case 0xDC: {CALL("C", mmu->readDoubleByte(PC)); break;}
+        case 0xCD: {CALL(mmu->readDoubleByte(PC)); break;}
+        case 0xCE: {ADC(mmu->readByte(++PC)); break;}
+        case 0xDE: {SBC(mmu->readByte(++PC)); break;}
+        case 0xEE: {XOR(mmu->readByte(++PC)); break;}
+        case 0xFE: {CP(mmu->readByte(++PC)); break;}
+        case 0xCF: {RST(0x8); break;}
+        case 0xDF: {RST(0x18); break;}
+        case 0xEF: {RST(0x28); break;}
+        case 0xFF: {RST(0x38); break;}
+    }
+    ++PC;
+    if (PC > 0x00e0) {
+        cout << "SP: " << SP << " ";
+        cout << "A: " << (int)getRegValue("A") << " ";
+        cout << "B: " << (int)getRegValue("B") << " ";
+        cout << "C: " << (int)getRegValue("C") << " ";
+        cout << "D: " << (int)getRegValue("D") << " ";
+        cout << "E: " << (int)getRegValue("E") << " ";
+        cout << "F: " << (int)getRegValue("F") << " ";
+        cout << "~Z: " << (int)getFlag('Z') << " ";
+        cout << "~N: " << (int)getFlag('N') << " ";
+        cout << "~H: " << (int)getFlag('H') << " ";
+        cout << "~C: " << (int)getFlag('C') << " ";
+        cout << "H: " << (int)getRegValue("H") << " ";
+        cout << "L: " << (int)getRegValue("L") << endl;
+    }
+//        if ((int) PC >= 0x002b ) {
+//            this_thread::sleep_for(1s);
+//        }
+    if (PC == 0x0100) {
+        mmu->setBoot(false);
+//            cout << "DID IT" << endl;
+        return;
+    }
 }
 
 void CPU::PREFIX_CB() {
     ++PC;
-    byte instruction = mmu.readByte(PC);
+    byte instruction = mmu->readByte(PC);
 //    cout << "Executing P_CB instruction " << hex << (int)instruction << endl;
     switch(instruction) {
         default: cerr << "Instruction " << hex << (int)instruction << " not recognized." << endl; assert(false); break;
@@ -1033,7 +1020,7 @@ void CPU::BIT(const byte& value, const std::string &name) {
 }
 
 void CPU::BIT(const byte& bit) {
-    setFlag('Z', ((mmu.readByte(getRegValue16("HL")) >> bit) & 0x01) == 0);
+    setFlag('Z', ((mmu->readByte(getRegValue16("HL")) >> bit) & 0x01) == 0);
     setFlag('N', false);
     setFlag('H', true);
 }
@@ -1050,13 +1037,13 @@ void CPU::RLC(const string &name) {
 
 void CPU::RLC() {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = (byte)((value << 1) | ((value & 0x80) >> 7)); // Receives bit 7 as first bit
     setFlag('Z', result == 0);
     setFlag('N', false);
     setFlag('H', false);
     setFlag('C', (byte)(value & 0x80) >> 7);
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
 }
 
 void CPU::RR(const string &name) {
@@ -1071,13 +1058,13 @@ void CPU::RR(const string &name) {
 
 void CPU::RR() {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = (value >> 1) | (getFlag('C') << 7);
     setFlag('Z', result == 0);
     setFlag('N', false);
     setFlag('H', false);
     setFlag('C', (byte)(value & 0x01));
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
 }
 
 void CPU::RRC(const string &name) {
@@ -1092,13 +1079,13 @@ void CPU::RRC(const string &name) {
 
 void CPU::RRC() {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = (byte)((value >> 1) | (value << 7));
     setFlag('Z', result == 0);
     setFlag('N', false);
     setFlag('H', false);
     setFlag('C', (byte)(value & 0x01));
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
 }
 
 void CPU::SRA(const string &name) {
@@ -1113,13 +1100,13 @@ void CPU::SRA(const string &name) {
 
 void CPU::SRA() {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = value >> 1 | (byte)(value & 0x80);
     setFlag('Z', result == 0);
     setFlag('N', false);
     setFlag('H', false);
     setFlag('C', (byte)(value & 0x01));
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
 }
 
 void CPU::SLA(const string &name) {
@@ -1134,13 +1121,13 @@ void CPU::SLA(const string &name) {
 
 void CPU::SLA() {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = value << 1 | (byte)(value & 0x01);
     setFlag('Z', result == 0);
     setFlag('N', false);
     setFlag('H', false);
     setFlag('C', (byte)(value & 0x80) >> 7);
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
 }
 
 void CPU::SWAP(const string &name) {
@@ -1155,13 +1142,13 @@ void CPU::SWAP(const string &name) {
 
 void CPU::SWAP() {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = (byte)(((value & 0xF0) >> 4) | ((value & 0x0F) << 4));
     setFlag('Z', result == 0);
     setFlag('N', false);
     setFlag('H', false);
     setFlag('C', false);
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
 }
 
 void CPU::SRL(const string &name) {
@@ -1176,13 +1163,13 @@ void CPU::SRL(const string &name) {
 
 void CPU::SRL() {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = value >> 1;
     setFlag('Z', result == 0);
     setFlag('N', false);
     setFlag('H', false);
     setFlag('C', (byte)(value & 0x01));
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
 }
 
 void CPU::RES(const CPU::byte &value, const std::string &name) {
@@ -1193,9 +1180,9 @@ void CPU::RES(const CPU::byte &value, const std::string &name) {
 
 void CPU::RES(const CPU::byte &bit) {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = (byte)(value & ~(0x01 << bit));
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
 }
 
 void CPU::SET(const CPU::byte &value, const std::string &name) {
@@ -1206,7 +1193,15 @@ void CPU::SET(const CPU::byte &value, const std::string &name) {
 
 void CPU::SET(const CPU::byte &bit) {
     uint16_t address = getRegValue16("HL");
-    byte value = mmu.readByte(address);
+    byte value = mmu->readByte(address);
     byte result = (byte)(value & 0x01 << bit);
-    mmu.writeByte(address, result);
+    mmu->writeByte(address, result);
+}
+
+uint16_t CPU::getPC() const {
+    return PC;
+}
+
+void CPU::setPC(uint16_t PC) {
+    CPU::PC = PC;
 }

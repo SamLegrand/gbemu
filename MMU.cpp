@@ -4,9 +4,9 @@
 
 #include "MMU.h"
 
-MMU::MMU(sf::RenderWindow& w) : boot(true), myGPU(w, this) {
+MMU::MMU(sf::RenderWindow& w) : myGPU(w, this), boot(true) {
     loadBIOS("../DMG_ROM.bin");
-    loadROM("../tetris.gb");
+    loadROM("../bubblesort.gb");
 };
 
 MMU::byte MMU::readByte(const uint16_t &address) {
