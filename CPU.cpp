@@ -97,26 +97,32 @@ uint16_t CPU::getRegValue16(const std::string &name) {
 
 void CPU::JR(const int8_t &r8) {
     PC += r8;
+    cycles += 12;
 }
 
 void CPU::JR(const std::string &instruction, const int8_t &r8) {
     bool flagvalue = true;
     if (instruction.front() == 'N') flagvalue = false;
     if (getFlag(instruction.back()) == flagvalue) {
+        cycles += 4;
         PC += r8;
     }
+    cycles += 8;
 }
 
 void CPU::JP(const uint16_t &a16) {
     PC = a16;
+    cycles += 16;
 }
 
 void CPU::JP(const std::string &instruction, const uint16_t &a16) {
     bool flagvalue = true;
     if (instruction.front() == 'N') flagvalue = false;
     if (getFlag(instruction.back()) == flagvalue) {
+        cycles += 4;
         PC = a16;
     }
+    cycles += 12;
 }
 
 void CPU::LD(const std::string &name, const CPU::byte &value) {
@@ -133,10 +139,12 @@ void CPU::LD(const std::string &name, const CPU::byte &value) {
     if (name == "H") { reg[6] = value; return;}
     if (name == "L") { reg[7] = value; return;}
     std::cout << "Register name " << name << " is invalid" << std::endl;
+    cycles += 4;
 }
 
 void CPU::LD16() {
     SP = getRegValue16("HL");
+    cycles += 8;
 }
 
 void CPU::LD16(const int8_t &value) {
@@ -146,9 +154,11 @@ void CPU::LD16(const int8_t &value) {
     setFlag('N', false);
     setFlag('H', generatesHalfCarry16(SP, (uint16_t)value));
     setFlag('C', generatesCarry16(SP, value));
+    cycles += 12;
 }
 
 void CPU::LD16(const std::string &name, const uint16_t &value) {
+    cycles += 12;
     if (name == "BC") {
         reg[1] = (byte)(value >> 8);
         reg[2] = (byte)(value);
@@ -182,6 +192,7 @@ void CPU::PUSH(const std::string &name) {
     mmu->writeByte((uint16_t)(SP - 1), getRegValue(name.substr(0, 1)));
     mmu->writeByte((uint16_t)(SP - 2), getRegValue(name.substr(1, 1)));
     SP -= 2;
+    cycles += 16;
 }
 
 void CPU::PUSH(const uint16_t &d16) {
@@ -194,6 +205,7 @@ void CPU::POP(const std::string &name) {
     LD(name.substr(1, 1), mmu->readByte(SP));
     LD(name.substr(0, 1), mmu->readByte((uint16_t)(SP + 1)));
     SP += 2;
+    cycles += 12;
 }
 
 uint16_t CPU::POP() {
@@ -206,11 +218,12 @@ void CPU::INC8(const std::string &name) {
     setFlag('N', false);
     setFlag('H', (newValue & 0x0F) == 0);
     LD(name, newValue);
-
+    cycles += 4;
 }
 
 void CPU::INC16(const std::string &name) {
     LD16(name, (uint16_t)(getRegValue16(name) + 1));
+    cycles += 8;
 }
 
 void CPU::DEC8(const std::string &name) {
@@ -219,10 +232,12 @@ void CPU::DEC8(const std::string &name) {
     setFlag('N', true);
     setFlag('H', newValue == 0xFF);
     LD(name, newValue);
+    cycles += 4;
 }
 
 void CPU::DEC16(const std::string &name) {
     LD16(name, (uint16_t)(getRegValue16(name) - 1));
+    cycles += 8;
 }
 
 void CPU::SUB(const CPU::byte &value) {
@@ -332,6 +347,7 @@ void CPU::ADD16(const int8_t &value) {
     setFlag('H', generatesHalfCarry16(SP, (uint16_t)value));
     setFlag('C', generatesCarry16(SP, value));
     SP = newValue;
+    cycles += 20;
 }
 
 void CPU::ADD16(const std::string &name) {
@@ -383,6 +399,7 @@ void CPU::RRA() {
 void CPU::CALL(const uint16_t &a16) {
     PUSH(PC);
     PC = (uint16_t)(a16 - 1);
+    cycles += 12;
 }
 
 void CPU::CALL(const std::string &instruction, const uint16_t &a16) {
@@ -391,11 +408,13 @@ void CPU::CALL(const std::string &instruction, const uint16_t &a16) {
     if (getFlag(instruction.back()) == flagvalue) {
         CALL (PC);
     }
+    cycles += 12;
 }
 
 void CPU::RET() {
     PC = (uint16_t)(mmu->readByte((uint16_t)(SP+1)) << 8) | mmu->readByte(SP);
     SP += 2;
+    cycles += 16;
 }
 
 void CPU::RET(const std::string &instruction) {
@@ -403,7 +422,10 @@ void CPU::RET(const std::string &instruction) {
     if (instruction.front() == 'N') flagvalue = false;
     if (getFlag(instruction.back()) == flagvalue) {
         RET();
+        cycles += 4;
+        return;
     }
+    cycles += 8;
 }
 
 void CPU::SCF() {
@@ -437,12 +459,14 @@ void CPU::DAA() {
 void CPU::CPL() {
     setFlag('N', true);
     setFlag('H', true);
+    cycles += 4;
 }
 
 void CPU::CCF() {
     setFlag('N', false);
     setFlag('H', false);
     setFlag('C', !getFlag('C'));
+    cycles += 4;
 }
 
 void CPU::RST(const uint16_t &a16) {
@@ -1204,4 +1228,12 @@ uint16_t CPU::getPC() const {
 
 void CPU::setPC(uint16_t PC) {
     CPU::PC = PC;
+}
+
+bool CPU::checkCycles() {
+    if (cycles >= 70244) {
+        cycles -= 70244;
+        return false;
+    }
+    return true;
 }

@@ -16,6 +16,7 @@
 class CPU {
     typedef unsigned char byte;
 private:
+    unsigned int cycles = 0;
     byte reg[8] = {0};
     uint16_t PC;
     uint16_t SP;
@@ -124,6 +125,8 @@ public:
     uint16_t getPC() const;
 
     void setPC(uint16_t PC);
+
+    bool checkCycles();
 };
 
 
