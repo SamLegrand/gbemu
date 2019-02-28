@@ -17,6 +17,7 @@ class CPU {
     typedef unsigned char byte;
 private:
     unsigned int currCycles = 0;
+    byte A, B, C, D, E, F, H, L;
     byte reg[8] = {0};
     uint16_t PC;
     uint16_t SP;
@@ -48,20 +49,20 @@ private:
 public:
     void setFlag(const char &name, const bool &value);
     bool getFlag(const char &name) const;
-    explicit CPU(MMU* mmuptr) : PC(0), SP(0), mmu(mmuptr) {};
+    explicit CPU(MMU* mmuptr) : PC(0), SP(0), mmu(mmuptr) {A = B = C = D = E = F = H = L = 0;};
 
     // LD16, PUSH, POP
     void LD16();                    // LD SP, HL
     void LD16(const int8_t &value); // LD HL, SP + r8
     void LD16(const std::string &name, const uint16_t &value);
-    void PUSH(const std::string &name);
+    void PUSH(const byte& reg1, const byte& reg2);
     void PUSH(const uint16_t &d16);
-    void POP(const std::string &name);
+    void POP(byte& reg1, byte& reg2);
     uint16_t POP();
 
     // LD
-    void LD(const std::string &name, const byte &value);
-    void LD(const std::string &name1, const std::string &name2);
+    void LD(byte& reg, const byte &value);
+    void LD(byte& reg1 , byte& reg2);
 
     // Arithmetic (16-bit)
     void INC16(const std::string &name);
@@ -70,24 +71,16 @@ public:
     void ADD16(const std::string &name);    // ADD HL, ..
 
     // Arithmetic (8-bit)
-    void INC8(const std::string &name);
-    void DEC8(const std::string &name);
+    void INC8(byte& reg);
+    void DEC8(byte& reg);
     void SUB(const byte &value);
-    void SUB(const std::string &name);
     void SBC(const byte &value);
-    void SBC(const std::string &name);
     void ADD(const byte &value);
-    void ADD(const std::string &name);
     void ADC(const byte &value);
-    void ADC(const std::string &name);
     void AND(const byte &value);
-    void AND(const std::string &name);
     void OR(const byte &value);
-    void OR(const std::string &name);
     void XOR(const byte &value);
-    void XOR(const std::string &name);
     void CP(const CPU::byte &value);
-    void CP(const std::string &name);
     void DAA(); // Look into this...
     void SCF();
     void CPL();
@@ -113,29 +106,28 @@ public:
     // PREFIX CB OPS
     void PREFIX_CB();
     void BIT(const byte& bit);
-    void BIT(const byte& value, const std::string& name);
+    void BIT(const byte& value, const byte& reg);
     void RL();
-    void RL(const std::string& name);
+    void RL(byte& reg);
     void RLC();
-    void RLC(const std::string& name);
+    void RLC(byte& reg);
     void RR();
-    void RR(const std::string& name);
+    void RR(byte& reg);
     void RRC();
-    void RRC(const std::string& name);
+    void RRC(byte& reg);
     void SLA();
-    void SLA(const std::string& name);
+    void SLA(byte& reg);
     void SRA();
-    void SRA(const std::string& name);
+    void SRA(byte& reg);
     void SWAP();
-    void SWAP(const std::string& name);
+    void SWAP(byte& reg);
     void SRL();
-    void SRL(const std::string& name);
+    void SRL(byte& reg);
     void RES(const byte& bit);
-    void RES(const byte& value, const std::string& name);
+    void RES(const byte& value, byte& reg);
     void SET(const byte& bit);
-    void SET(const byte& value, const std::string& name);
+    void SET(const byte& value, byte& reg);
 
-    byte getRegValue(const std::string &name) const;
     uint16_t getRegValue16(const std::string &name);
 //    void setReg(std::string name, byte value);
     void execute();

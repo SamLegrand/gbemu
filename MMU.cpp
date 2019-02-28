@@ -7,6 +7,7 @@
 MMU::MMU(sf::RenderWindow& w) : myGPU(w, this), boot(true) {
     loadBIOS("../DMG_ROM.bin");
     loadROM("../bubblesort.gb");
+    boot = true;
 };
 
 MMU::byte MMU::readByte(const uint16_t &address) {
