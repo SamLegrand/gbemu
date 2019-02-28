@@ -5,6 +5,8 @@
 #include "GameBoy.h"
 
 void GameBoy::executeFrame() {
-    cpu.execute();
-    cout << cpu.getPC() << endl;
+    while (cpu.checkCycles()) {
+        cpu.execute();
+        cout << cpu.getPC() << endl;
+    }
 }
