@@ -83,14 +83,14 @@ void CPU::JR(const std::string &instruction, const int8_t &r8) {
 }
 
 void CPU::JP(const uint16_t &a16) {
-    PC = a16;
+    PC = (uint16_t)(a16 - 1);
 }
 
 void CPU::JP(const std::string &instruction, const uint16_t &a16) {
     bool flagvalue = true;
     if (instruction.front() == 'N') flagvalue = false;
     if (getFlag(instruction.back()) == flagvalue) {
-        PC = a16;
+        PC = (uint16_t)(a16 - 1);
     }
 }
 
@@ -318,7 +318,7 @@ void CPU::CALL(const std::string &instruction, const uint16_t &a16) {
     bool flagvalue = true;
     if (instruction.front() == 'N') flagvalue = false;
     if (getFlag(instruction.back()) == flagvalue) {
-        CALL (PC);
+        CALL (a16);
     }
 }
 
@@ -403,7 +403,9 @@ void CPU::RL() {
 
 void CPU::execute() {
     byte instruction = mmu->readByte(PC);
-    cout << "Executing instruction " << hex << (int)instruction << endl;
+    if (PC >= 0x0100) {
+        cout << "Executing instruction " << hex << (int)instruction << endl;
+    }
     switch (instruction) {
         default: cerr << "Instruction " << hex << (int)instruction << " not recognized." << endl; assert(false); break;
         case 0x00: {break;}    // NOP
@@ -653,7 +655,7 @@ void CPU::execute() {
         case 0xFF: {RST(0x38); break;}
     }
     ++PC;
-    if (PC > 0x00e0) {
+    if (PC >= 0x0100) {
         cout << "SP: " << SP << " ";
         cout << "A: " << (int)A << " ";
         cout << "B: " << (int)B << " ";
@@ -668,9 +670,9 @@ void CPU::execute() {
         cout << "H: " << (int)H << " ";
         cout << "L: " << (int)L << endl;
     }
-//        if ((int) PC >= 0x002b ) {
-//            this_thread::sleep_for(1s);
-//        }
+//    if ((int) PC >= 0x0100 ) {
+//        this_thread::sleep_for(1s);
+//    }
     if (PC == 0x0100) {
         mmu->setBoot(false);
 //            cout << "DID IT" << endl;
@@ -1137,8 +1139,8 @@ void CPU::setPC(uint16_t PC) {
 }
 
 bool CPU::checkCycles() {
-    if (currCycles >= 70244) {
-        currCycles -= 70244;
+    if (currCycles >= 70224) {
+        currCycles -= 70224;
         return false;
     }
     byte instruction = mmu->readByte(PC);

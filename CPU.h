@@ -18,7 +18,6 @@ class CPU {
 private:
     unsigned int currCycles = 0;
     byte A, B, C, D, E, F, H, L;
-    byte reg[8] = {0};
     uint16_t PC;
     uint16_t SP;
     MMU* mmu;

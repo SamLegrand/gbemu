@@ -78,15 +78,22 @@ uint16_t MMU::readDoubleByte(uint16_t &address) {
 }
 
 void MMU::loadROM(const std::string &filename) {
-    ifstream file(filename);
+    ifstream file(filename, ifstream::binary);
     if (!file.is_open()) {
         cerr << "Could not open file '" << filename << "'." << endl;
     }
-    byte b = 0;
-    unsigned int index = 0;
-    while (file >> noskipws >> b) {
-        ROM[index++] = b;
-    }
+    for (int i = 0; file >> noskipws >> ROM[i]; i++);
+//    int count = 0;
+//    for (const auto& myByte : ROM) {
+//        ++count;
+//        cout << hex << (int)myByte;
+//        if (count % 16 == 0) {
+//            cout << endl;
+//        }
+//        if (count % 2 == 0) {
+//            cout << " ";
+//        }
+//    }
 }
 
 void MMU::loadBIOS(const std::string &filename) {
@@ -97,11 +104,7 @@ void MMU::loadBIOS(const std::string &filename) {
 //    else {
 //        cout << "Loading BIOS..." << endl;
 //    }
-    byte b = 0;
-    unsigned int index = 0;
-    while (file >> noskipws >> b) {
-        BIOS[index++] = b;
-    }
+    for (int i = 0; file >> noskipws >> BIOS[i]; i++);
 //    for (const auto& myByte : BIOS) {
 //        cout << hex << (int)myByte << endl;
 //    }

@@ -11,11 +11,12 @@
 
 class GameBoy {
 public:
-    explicit GameBoy(sf::RenderWindow& w) : mmu(w), cpu(&mmu)  {};
+    typedef unsigned char byte;
+    explicit GameBoy(sf::RenderWindow& w) : mmu(new MMU(w)), cpu(mmu)  {};
     void executeFrame();
 
 private:
-    MMU mmu;
+    MMU* mmu;
     CPU cpu;
 };
 

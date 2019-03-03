@@ -12,7 +12,7 @@ int main() {
                 return 0;
             }
         }
-        gb.executeFrame();
+        gb.executeFrame();      // Execute one frame
         window.display();
     }
     return 0;
