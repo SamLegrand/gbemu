@@ -12,11 +12,15 @@
 #include <thread>
 #include "MMU.h"
 #include <assert.h>
+#include "Utils.h"
+#include  <iomanip>
 
 class CPU {
     typedef unsigned char byte;
 private:
+    ofstream f;
     unsigned int currCycles = 0;
+    unsigned int i = 1;
     byte A, B, C, D, E, F, H, L;
     uint16_t PC;
     uint16_t SP;
@@ -48,7 +52,7 @@ private:
 public:
     void setFlag(const char &name, const bool &value);
     bool getFlag(const char &name) const;
-    explicit CPU(MMU* mmuptr) : PC(0), SP(0), mmu(mmuptr) {A = B = C = D = E = F = H = L = 0;};
+    explicit CPU(MMU* mmuptr) : PC(0), SP(0), mmu(mmuptr) {A = B = C = D = E = F = H = L = 0; f.open("../output.txt");};
 
     // LD16, PUSH, POP
     void LD16();                    // LD SP, HL
@@ -57,7 +61,6 @@ public:
     void PUSH(const byte& reg1, const byte& reg2);
     void PUSH(const uint16_t &d16);
     void POP(byte& reg1, byte& reg2);
-    uint16_t POP();
 
     // LD
     void LD(byte& reg, const byte &value);
@@ -136,6 +139,8 @@ public:
     void setPC(uint16_t PC);
 
     bool checkCycles();
+
+    unsigned int getCycles();
 };
 
 

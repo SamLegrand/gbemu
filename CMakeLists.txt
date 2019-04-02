@@ -11,6 +11,6 @@ include_directories(${SFML_INCLUDE_DIR})
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(GameboyEmulator main.cpp CPU.cpp CPU.h MMU.cpp MMU.h GPU.cpp GPU.h GameBoy.cpp GameBoy.h)
+add_executable(GameboyEmulator main.cpp CPU.cpp CPU.h MMU.cpp MMU.h GPU.cpp GPU.h GameBoy.cpp GameBoy.h Utils.cpp Utils.h)
 
 target_link_libraries(GameboyEmulator ${SFML_LIBRARIES})

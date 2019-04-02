@@ -159,10 +159,6 @@ void CPU::POP(byte& reg1, byte& reg2) {
     SP += 2;
 }
 
-uint16_t CPU::POP() {
-    return (uint16_t)mmu->readByte(SP) & ((uint16_t)mmu->readByte((byte)(SP + 1)) << 4);
-}
-
 void CPU::INC8(byte& reg) {
     byte newValue = (byte)(reg + 1);
     setFlag('Z', newValue == 0);
@@ -179,7 +175,7 @@ void CPU::DEC8(byte& reg) {
     byte newValue = (byte)(reg - 1);
     setFlag('Z', newValue == 0);
     setFlag('N', true);
-    setFlag('H', newValue == 0xFF);
+    setFlag('H', ((reg ^ newValue ^ 0x01) & 0x10) == 0x10);
     LD(reg, newValue);
 }
 
@@ -403,9 +399,9 @@ void CPU::RL() {
 
 void CPU::execute() {
     byte instruction = mmu->readByte(PC);
-    if (PC >= 0x0100) {
-        cout << "Executing instruction " << hex << (int)instruction << endl;
-    }
+//    if (PC >= 0x0100) {
+//        cout << "Executing instruction " << hex << (int)instruction << endl;
+//    }
     switch (instruction) {
         default: cerr << "Instruction " << hex << (int)instruction << " not recognized." << endl; assert(false); break;
         case 0x00: {break;}    // NOP
@@ -655,20 +651,26 @@ void CPU::execute() {
         case 0xFF: {RST(0x38); break;}
     }
     ++PC;
-    if (PC >= 0x0100) {
-        cout << "SP: " << SP << " ";
-        cout << "A: " << (int)A << " ";
-        cout << "B: " << (int)B << " ";
-        cout << "C: " << (int)C << " ";
-        cout << "D: " << (int)D << " ";
-        cout << "E: " << (int)E << " ";
-        cout << "F: " << (int)F << " ";
-        cout << "~Z: " << (int)getFlag('Z') << " ";
-        cout << "~N: " << (int)getFlag('N') << " ";
-        cout << "~H: " << (int)getFlag('H') << " ";
-        cout << "~C: " << (int)getFlag('C') << " ";
-        cout << "H: " << (int)H << " ";
-        cout << "L: " << (int)L << endl;
+    if (i == 7) {
+        cout << hex << 0xFF00 + (int)mmu->readByte(PC - 1) << endl;
+        cout << "Executing instruction " << hex << (int)instruction << endl;
+    }
+    if (PC > 0x0100 && i <= 10000) {
+        f << hex << "PC: " << setfill('0') << setw(4) << PC << "  ";
+        f << "A: " << setfill('0') << setw(2) <<  (int)A << "  ";
+        f << "B: " << setfill('0') << setw(2) << (int)B << "  ";
+        f << "C: " << setfill('0') << setw(2) << (int)C << "  ";
+        f << "D: " << setfill('0') << setw(2) << (int)D << "  ";
+        f << "E: " << setfill('0') << setw(2) << (int)E << "  ";
+        f << "H: " << setfill('0') << setw(2) << (int)H << "  ";
+        f << "L: " << setfill('0') << setw(2) << (int)L << "  ";
+//        cout << "~Z: " << (int)getFlag('Z') << " ";
+//        cout << "~N: " << (int)getFlag('N') << " ";
+//        cout << "~H: " << (int)getFlag('H') << " ";
+//        cout << "~C: " << (int)getFlag('C') << " ";
+        f << "SP: " << SP << "  ";
+        f << "F: " << setfill('0') << setw(2) << (int)F << "   " << dec << this->i << endl;
+        ++this->i;
     }
 //    if ((int) PC >= 0x0100 ) {
 //        this_thread::sleep_for(1s);
@@ -677,6 +679,12 @@ void CPU::execute() {
         mmu->setBoot(false);
 //            cout << "DID IT" << endl;
         return;
+    }
+    if (i == 10001) {
+        f.close();
+        Utils::compareFiles();
+        assert(false);
+        i++;
     }
 }
 
@@ -1146,4 +1154,8 @@ bool CPU::checkCycles() {
     byte instruction = mmu->readByte(PC);
     currCycles += cycles[instruction];
     return true;
+}
+
+unsigned int CPU::getCycles() {
+    return currCycles;
 }

@@ -16,7 +16,7 @@ using namespace std;
 class MMU {
     typedef unsigned char byte;
 public:
-    explicit MMU(sf::RenderWindow& w);
+    explicit MMU();
     void loadROM(const std::string& filename);
     void loadBIOS(const std::string& filename);
     uint16_t readDoubleByte(uint16_t &address);
@@ -25,9 +25,10 @@ public:
     void writeByte(const uint16_t &address, const uint8_t &value);
     void setBoot(const bool& toSet);
     bool getBoot() const;
+    void setGPU(GPU* g);
 
 private:
-    GPU myGPU;
+    GPU* gpu;
     bool boot;
     byte BIOS[256] = {0};
     byte ROM[32768] = {0};    // Cartridge ROM (0x0000 to 0x7FFF)

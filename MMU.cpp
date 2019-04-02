@@ -4,14 +4,18 @@
 
 #include "MMU.h"
 
-MMU::MMU(sf::RenderWindow& w) : myGPU(w, this), boot(true) {
+MMU::MMU() : boot(true) {
     loadBIOS("../DMG_ROM.bin");
     loadROM("../bubblesort.gb");
     boot = true;
-};
+}
+
+void MMU::setGPU(GPU* g) {
+    gpu = g;
+}
 
 MMU::byte MMU::readByte(const uint16_t &address) {
-    cout << "Reading from " << address << endl;
+//    cout << "Reading from " << address << endl;
     if (boot && address < 0x0100) {
         return BIOS[address];
     }
@@ -23,7 +27,7 @@ MMU::byte MMU::readByte(const uint16_t &address) {
     }
     else if ((address >= 0x8000 && address <= 0x9FFF) ||
             (address >= 0xFE00 && address <= 0xFE9F)) {
-        return myGPU[address];
+        return gpu->operator[](address);
     }
     else if (address >= 0xFF00 && address <= 0xFF7F) {
         return IO[address - 0xFF00];
@@ -50,12 +54,12 @@ void MMU::writeByte(const uint16_t &address, const uint8_t &value) {
     }
     else if ((address <= 0x9FFF && address >= 0x8000) ||
             (address >= 0xFE00 && address <= 0xFE9F)) {
-        myGPU.write(address, value);
+        gpu->write(address, value);
     }
     else if (address >= 0xFF00 && address <= 0xFF7F) {
         IO[address - 0xFF00] = value;
         if (address == 0xFF40) {
-            myGPU.controlDisplay(value);
+            gpu->controlDisplay(value);
         }
     }
     else if (address <= 0xFFFE && address >= 0xFF80) {
