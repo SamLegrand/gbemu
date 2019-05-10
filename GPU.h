@@ -21,6 +21,7 @@ public:
     void checkCycles();
     void drawLine();
     void addCycles(unsigned int num);
+    byte getBackgroundPixel(byte x, byte y);
 
 private:
     unsigned int currCycles = 0;
@@ -28,6 +29,7 @@ private:
     bool bgEnabled = false;
     uint16_t bgMap;
     uint16_t tiles;
+    uint16_t windowMap;
     MMU* mmu;
     sf::RenderWindow& window;
     sf::Image image;

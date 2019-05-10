@@ -4,10 +4,9 @@
 
 #include "MMU.h"
 
-MMU::MMU() : boot(true) {
-    loadBIOS("../DMG_ROM.bin");
-    loadROM("../bubblesort.gb");
-    boot = true;
+MMU::MMU() : boot(false) {
+//    loadBIOS("../DMG_ROM.bin");
+    loadROM("../TESTS.gb");
 }
 
 void MMU::setGPU(GPU* g) {

@@ -599,7 +599,8 @@ void CPU::execute() {
         case 0xC0: {RET("NZ"); break;}
         case 0xD0: {RET("NC"); break;}
         case 0xE0: {mmu->writeByte((uint16_t)(0xFF00 + mmu->readByte(++PC)), A); break;}
-        case 0xF0: {LD(A, mmu->readByte((uint16_t)(0xFF00 + mmu->readByte(++PC)))); break;}
+        case 0xF0: {LD(A, mmu->readByte((uint16_t)(0xFF00 + mmu->readByte(++PC)))); cout << "reading from: " << hex << (0xFF00 + mmu->readByte(PC)) <<
+        ", value:" << hex << (int)A << endl; break;}
         case 0xC1: {POP(B, C); break;}
         case 0xD1: {POP(D, E); break;}
         case 0xE1: {POP(H, L); break;}
@@ -644,18 +645,18 @@ void CPU::execute() {
         case 0xCE: {ADC(mmu->readByte(++PC)); break;}
         case 0xDE: {SBC(mmu->readByte(++PC)); break;}
         case 0xEE: {XOR(mmu->readByte(++PC)); break;}
-        case 0xFE: {CP(mmu->readByte(++PC)); break;}
+        case 0xFE: {CP(mmu->readByte(++PC)); cout << hex << PC << " - " << "compare with: " << (int)mmu->readByte(PC) << endl; break;}
         case 0xCF: {RST(0x8); break;}
         case 0xDF: {RST(0x18); break;}
         case 0xEF: {RST(0x28); break;}
         case 0xFF: {RST(0x38); break;}
     }
     ++PC;
-    if (i == 7) {
-        cout << hex << 0xFF00 + (int)mmu->readByte(PC - 1) << endl;
-        cout << "Executing instruction " << hex << (int)instruction << endl;
-    }
-    if (PC > 0x0100 && i <= 10000) {
+//    if (i == 7) {
+//        cout << hex << 0xFF00 + (int)mmu->readByte(PC - 1) << endl;
+//        cout << "Executing instruction " << hex << (int)instruction << endl;
+//    }
+    if (PC > 0x0100 && i <= 100000) {
         f << hex << "PC: " << setfill('0') << setw(4) << PC << "  ";
         f << "A: " << setfill('0') << setw(2) <<  (int)A << "  ";
         f << "B: " << setfill('0') << setw(2) << (int)B << "  ";
@@ -680,12 +681,12 @@ void CPU::execute() {
 //            cout << "DID IT" << endl;
         return;
     }
-    if (i == 10001) {
-        f.close();
-        Utils::compareFiles();
-        assert(false);
-        i++;
-    }
+//    if (i == 10001) {
+//        f.close();
+//        Utils::compareFiles();
+//        assert(false);
+//        i++;
+//    }
 }
 
 void CPU::PREFIX_CB() {

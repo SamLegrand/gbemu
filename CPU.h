@@ -17,7 +17,7 @@
 
 class CPU {
     typedef unsigned char byte;
-private:
+public:
     ofstream f;
     unsigned int currCycles = 0;
     unsigned int i = 1;

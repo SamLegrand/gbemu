@@ -35,7 +35,7 @@ private:
     byte WRAM[8192] = {0};    // Stores high scores and saved games (0xA000 to 0xBFFF)
     byte RAM[8192] = {0};     // Working RAM provided by MMU (0xC000 to 0xDFFF)
     byte IO[128] = {0};       // I/O Registers (0xFF00 to 0xFF7F)
-    byte HRAM[63] = {0};      // Where stack data is stored
+    byte HRAM[127] = {0};      // Where stack data is stored
 };
 
 #endif //GAMEBOYEMULATOR_MMU_H

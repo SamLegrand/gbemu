@@ -10,14 +10,34 @@ GPU::GPU(sf::RenderWindow& w) : window(w) {image.create(256, 256);}
 
 void GPU::write(const uint16_t &address, const uint8_t &value) {
     (*this)[address] = value;
-    if (address == 0xFF44) {
-        controlDisplay(value);
-    }
+}
+
+GPU::byte GPU::getBackgroundPixel(GPU::byte x, GPU::byte y) {
+    byte tileX = x/8;
+    byte tileY = y/8;
+
+    uint16_t tileAddress = windowMap + 32 * tileY + tileX;
+    int tileId = (*this)[tileAddress];
+//    if (tiles == 0x8800) {
+//         tileId += 128;
+//    }
+    uint16_t tileDataAddress = tileId * 16 + tiles;
+
+    byte pixelX = x % 8;
+    byte pixelY = y % 8;
+
+    tileDataAddress += 2 * pixelY;
+
+    byte a = (*this)[tileDataAddress];
+    byte b = (*this)[tileDataAddress + 1];
+    a >>= 7 - pixelX;
+    b >>= 7 - pixelX;
+
+    return (a & 1) + 2*(b & 1);
 }
 
 void GPU::controlDisplay(const byte& value) {
 //    byte screen[65536];
-    uint16_t windowMap; // 1024
     bool windowEnabled = (value & 0x20) >> 5;
     bgEnabled = (bool)(value & 0x01);
     if (value & 0x80) {
@@ -92,73 +112,19 @@ void GPU::checkCycles() {
 }
 
 void GPU::drawLine() {
-//    byte scrollX = mmu->readByte(0xFF43);
-//    byte scrollY = mmu->readByte(0xFF42);
-//    byte y = lineNr + scrollY;
-//
     if (bgEnabled) {
-//        for (byte pixelX = 0; pixelX < 160; pixelX += 8) {
-//            byte x = pixelX + scrollX;
-//            byte tileX = x/8;
-//            byte tileY = y/8;
-//            uint16_t bgMapAddress = bgMap + 32*tileY + tileX;
-//            uint16_t tileNr = (*this)[bgMapAddress]*16 + tiles;
-//            for (int j = tileNr; j < tileNr + 16; j += 2) {
-//                unsigned int pixel = 0;
-//                unsigned int count = 7;
-//                for (int k = 0x80; k > 0; k /= 2) {
-//                    sf::Color c;
-//                    int colorNr;
-//                    int number = (((*this)[j + 1] & k) >> (count - 1)) + (((*this)[j] & k) >> count);
-//                    --count;
-//                    colorNr = mmu->readByte(0xFF47) & (0x03 << number);
-//                    switch(colorNr) {
-//                        default: break;
-//                        case 0: c = sf::Color::White; break;
-//                        case 1: c = sf::Color(0x67, 0x67, 0x67); break;
-//                        case 2: c = sf::Color(0xb6, 0xb6, 0xb6); break;
-//                        case 3: c = sf::Color::Black; break;
-//                    }
-////                    cout << dec << i%32*8 + pixel << ", ";
-////                    cout << (i - bgMap)/32*8 + lineNr << ": ";
-////                    cout << (int)c.r << ", " << (int)c.g << ", " << (int)c.b << endl;
-//                    image.setPixel(bgMapAddress%32*8 + pixel, lineNr, c);
-//                    ++pixel;
-//                }
-//            }
-//        }
-        for (int i = bgMap; i < bgMap + 1024; ++i) {
-            uint16_t tileNr = (*this)[i]*16 + tiles;
-            if (tiles == 0x8800) {
-                tileNr += 128;
+        for (int x = 0; x < 160; ++x) {
+            sf::Color c;
+            int colorId = getBackgroundPixel(x, lineNr);
+            int colorNr = mmu->readByte(0xFF47) >> (2 * colorId) & 0x3;
+            switch(colorNr) {
+                default: break;
+                case 0: c = sf::Color::White; break;
+                case 1: c = sf::Color(0x67, 0x67, 0x67); break;
+                case 2: c = sf::Color(0xb6, 0xb6, 0xb6); break;
+                case 3: c = sf::Color::Black; break;
             }
-            for (int j = tileNr; j < tileNr + 16; j += 2) {
-                unsigned int line = (j - tileNr)/2;
-                if (line == lineNr) {
-//                    j - line*2 = tileNr;
-                    unsigned int pixel = 0;
-                    unsigned int count = 7;
-                    for (int k = 0x80; k > 0; k /= 2) {
-                        sf::Color c;
-                        int colorNr;
-                        int number = (((*this)[j + 1] & k) >> (count - 1)) + (((*this)[j] & k) >> count);
-                        --count;
-                        colorNr = mmu->readByte(0xFF47) & (0x03 << number);
-                        switch(colorNr) {
-                            default: break;
-                            case 0: c = sf::Color::White; break;
-                            case 1: c = sf::Color(0x67, 0x67, 0x67); break;
-                            case 2: c = sf::Color(0xb6, 0xb6, 0xb6); break;
-                            case 3: c = sf::Color::Black; break;
-                        }
-//                    cout << dec << i%32*8 + pixel << ", ";
-//                    cout << (i - bgMap)/32*8 + lineNr << ": ";
-//                    cout << (int)c.r << ", " << (int)c.g << ", " << (int)c.b << endl;
-                        image.setPixel(i%32*8 + pixel, (i - bgMap)/32*8 + lineNr , c);
-                        ++pixel;
-                    }
-                }
-            }
+            image.setPixel(x, lineNr , c);
         }
     }
     sf::Sprite mySprite;
@@ -172,7 +138,7 @@ void GPU::drawLine() {
     ++lineNr;
 //    cerr << lineNr << endl;
     if (lineNr >= 155) {
-        image.create(256, 256);
+//        image.create(256, 256);
         lineNr = 0;
     }
 }
